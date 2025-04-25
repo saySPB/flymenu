@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление местами — Бизнес-класс</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <h1>Управление местами — Бизнес-класс</h1>
+    <div class="main-container">
+        <div class="left-column" id="left-column"></div>
+        <div class="right-column" id="right-column"></div>
+    </div>
+
+    <div class="buttons">
+        <button class="add-button btn" id="add-button" onclick="addSeat()">Добавить место</button>
+        <button class="next-button btn" id="next-button" onclick="nextStep()">Далее</button>
+        <button class="reset-button btn" id="reset-button" onclick="resetAll()">Сбросить</button>
+        <button class="load-menu-button btn" onclick="openFlightModal()">Подгрузить меню</button>
+        <button class="view-all-orders-button btn" onclick="viewAllOrders()">Показать все заказы</button>
+    </div>
+
+    <div class="buttons-settings">
+        <button class="settings-button btn" id="settings-button" onclick="openSettingsModal()">⚙️</button>
+        <button class="theme-toggle btn" id="theme-toggle" onclick="toggleTheme()">🌙</button>
+    </div>
+
+    <div class="orders-modal" id="orders-modal" style="display: none;">
+        <h3>Все заказы</h3>
+        <ul id="all-orders-list"></ul>
+        <button class="modal-button btn" onclick="shareOrders('telegram')">Поделиться в Telegram</button>
+        <button class="modal-button btn" onclick="shareOrders('whatsapp')">Поделиться в WhatsApp</button>
+        <button class="modal-button btn close-button" onclick="closeOrdersModal()">Закрыть</button>
+    </div>
+
+    <div class="settings-modal" id="settings-modal" style="display: none;">
+        <h3>Настройки нумерации</h3>
+        <input type="text" id="seat-letters" placeholder="Порядок букв для мест (через запятую, например, A,C,F,D)">
+        <input type="number" id="start-row" placeholder="Начальный номер ряда (например, 1)">
+        <input type="text" id="end-seat" placeholder="Конечное место (например, 3F)">
+        <label>
+            <input type="checkbox" id="use-letters" checked> Использовать буквы
+        </label>
+        <button class="modal-button btn" onclick="applySettings()">Сохранить</button>
+        <button class="modal-button btn close-button" onclick="closeSettingsModal()">Закрыть</button>
+    </div>
+
+    <div class="flight-modal" id="flight-modal" style="display: none;">
+        <h3>Подгрузка меню</h3>
+        <select id="flight-direction">
+            <option value="">Выберите направление</option>
+        </select>
+        <button class="modal-button btn" onclick="loadMenuFromGitHub()">Подгрузить</button>
+        <button class="modal-button btn close-button" onclick="closeFlightModal()">Закрыть</button>
+    </div>
+
+    <script>
+        const leftColumn = document.getElementById('left-column');
+        const rightColumn = document.getElementById('right-column');
+        const ordersModal = document.getElementById('orders-modal');
+        const allOrdersList = document.getElementById('all-orders-list');
+        const settingsModal = document.getElementById('settings-modal');
+        const flightModal = document.getElementById('flight-modal');
+        const seatLettersInput = document.getElementById('seat-letters');
+        const startRowInput = document.getElementById('start-row');
+        const endSeatInput = document.getElementById('end-seat');
+        const useLettersCheckbox = document.getElementById('use-letters');
+        const flightDirectionSelect = document.getElementById('flight-direction');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        let selectedSeats = JSON.parse(localStorage.getItem('selectedSeats')) || [];
+        let seatLetters = ['A', 'C', 'F', 'D'];
+        let startRow = 1;
+        let endSeat = '4';
+        let seatCounter = 0;
+        let useLetters = true;
+
+        if (localStorage.getItem('theme') === 'light') {
+            document.body.classList.add('light-theme');
+            themeToggle.textContent = '☀️';
+        } else {
+            themeToggle.textContent = '🌙';
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('light-theme');
+            const isLight = document.body.classList.contains('light-theme');
+            themeToggle.textContent = isLight ? '☀️' : '🌙';
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        }
+
+        function loadSeats() {
+            const savedSeats = JSON.parse(localStorage.getItem('savedSeats')) || [];
+            leftColumn.innerHTML = '';
+            rightColumn.innerHTML = '';
+
+            savedSeats.forEach(seat => {
+                const savedMenu = JSON.parse(localStorage.getItem(`menu_${seat}`)) || {};
+                const hasOrder = Object.keys(savedMenu).some(key => key !== 'passengerName' && savedMenu[key]?.checked);
+                const passengerName = savedMenu.passengerName ? ` (${savedMenu.passengerName})` : '';
+                const seatElement = document.createElement('div');
+                seatElement.setAttribute('data-seat', seat);
+                seatElement.textContent = seat + (hasOrder ? ' (Сохранено)' : '') + passengerName;
+
+                if (selectedSeats.includes(seat)) {
+                    seatElement.className = 'seat selected-seat';
+                    rightColumn.appendChild(seatElement);
+                } else {
+                    seatElement.className = 'seat' + (hasOrder ? ' saved-seat' : '');
+                    leftColumn.appendChild(seatElement);
+                }
+            });
+        }
+
+        function viewAllOrders() {
+            const savedSeats = JSON.parse(localStorage.getItem('savedSeats')) || [];
+            allOrdersList.innerHTML = '';
+
+            savedSeats.forEach(seat => {
+                const savedMenu = JSON.parse(localStorage.getItem(`menu_${seat}`)) || {};
+                let hasItems = false;
+                let sections = {};
+                const passengerName = savedMenu.passengerName ? ` (${savedMenu.passengerName})` : '';
+
+                Object.keys(savedMenu).forEach(item => {
+                    if (item !== 'passengerName' && savedMenu[item]?.checked) {
+                        hasItems = true;
+                        const section = savedMenu[item].section || 'Без раздела';
+                        if (!sections[section]) sections[section] = [];
+                        sections[section].push(item);
+                        if (savedMenu[item].subitems && savedMenu[item].subitems.length > 0) {
+                            savedMenu[item].subitems.forEach(subitem => {
+                                sections[section].push(`  - ${subitem}`);
+                            });
+                        }
+                    }
+                });
+
+                if (hasItems) {
+                    const listItem = document.createElement('li');
+                    let orderDetails = `<strong>Место ${seat}${passengerName}:</strong><br>`;
+                    Object.keys(sections).forEach(section => {
+                        orderDetails += `<strong>${section}:</strong><br>${sections[section].join('<br>')}<br>`;
+                    });
+                    listItem.innerHTML = orderDetails;
+                    allOrdersList.appendChild(listItem);
+                }
+            });
+
+            ordersModal.style.display = 'block';
+        }
+
+        function closeOrdersModal() {
+            ordersModal.style.display = 'none';
+        }
+
+        function shareOrders(platform) {
+            const savedSeats = JSON.parse(localStorage.getItem('savedSeats')) || [];
+            let ordersText = 'Список заказов:\n\n';
+
+            savedSeats.forEach(seat => {
+                const savedMenu = JSON.parse(localStorage.getItem(`menu_${seat}`)) || {};
+                let hasItems = false;
+                let sections = {};
+                const passengerName = savedMenu.passengerName ? ` (${savedMenu.passengerName})` : '';
+
+                Object.keys(savedMenu).forEach(item => {
+                    if (item !== 'passengerName' && savedMenu[item]?.checked) {
+                        hasItems = true;
+                        const section = savedMenu[item].section || 'Без раздела';
+                        if (!sections[section]) sections[section] = [];
+                        sections[section].push(item);
+                        if (savedMenu[item].subitems && savedMenu[item].subitems.length > 0) {
+                            savedMenu[item].subitems.forEach(subitem => {
+                                sections[section].push(`  - ${subitem}`);
+                            });
+                        }
+                    }
+                });
+
+                if (hasItems) {
+                    ordersText += `Место ${seat}${passengerName}:\n`;
+                    Object.keys(sections).forEach(section => {
+                        ordersText += `${section}:\n${sections[section].join('\n')}\n`;
+                    });
+                    ordersText += '\n';
+                }
+            });
+
+            const encodedText = encodeURIComponent(ordersText);
+            if (platform === 'telegram') {
+                window.open(`https://t.me/share/url?url=${encodeURIComponent('Список заказов')}&text=${encodedText}`, '_blank');
+            } else if (platform === 'whatsapp') {
+                window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
+            }
+        }
+
+        function handleSeatClick(event) {
+            const seat = event.target;
+            const seatNumber = seat.getAttribute('data-seat');
+
+            if (seat.parentElement === leftColumn) {
+                const selectedSeat = document.createElement('div');
+                selectedSeat.className = 'seat selected-seat';
+                selectedSeat.setAttribute('data-seat', seatNumber);
+                
+                const savedMenu = JSON.parse(localStorage.getItem(`menu_${seatNumber}`)) || {};
+                const passengerName = savedMenu.passengerName ? ` (${savedMenu.passengerName})` : '';
+                selectedSeat.textContent = seatNumber + passengerName;
+                
+                rightColumn.appendChild(selectedSeat);
+                seat.remove();
+                selectedSeats.push(seatNumber);
+            } else if (seat.parentElement === rightColumn) {
+                const originalSeat = document.createElement('div');
+                originalSeat.className = 'seat';
+                originalSeat.setAttribute('data-seat', seatNumber);
+                
+                const savedMenu = JSON.parse(localStorage.getItem(`menu_${seatNumber}`)) || {};
+                const hasOrder = Object.keys(savedMenu).some(key => key !== 'passengerName' && savedMenu[key]?.checked);
+                const passengerName = savedMenu.passengerName ? ` (${savedMenu.passengerName})` : '';
+                originalSeat.textContent = seatNumber;
+                
+                if (hasOrder) {
+                    originalSeat.classList.add('saved-seat');
+                    originalSeat.textContent += ' (Сохранено)' + passengerName;
+                } else {
+                    originalSeat.textContent += passengerName;
+                }
+                
+                leftColumn.appendChild(originalSeat);
+                seat.remove();
+                selectedSeats = selectedSeats.filter(s => s !== seatNumber);
+            }
+
+            localStorage.setItem('selectedSeats', JSON.stringify(selectedSeats));
+        }
+
+        function nextStep() {
+            if (selectedSeats.length === 0) {
+                alert('Пожалуйста, выберите хотя бы одно место!');
+                return;
+            }
+            localStorage.setItem('currentSeats', JSON.stringify(selectedSeats));
+            window.location.href = 'menu.html';
+        }
+
+        function resetAll() {
+            if (confirm('Вы уверены, что хотите сбросить все заказы? Это действие нельзя отменить.')) {
+                const savedSeats = JSON.parse(localStorage.getItem('savedSeats')) || [];
+                savedSeats.forEach(seat => {
+                    localStorage.removeItem(`menu_${seat}`);
+                });
+                localStorage.removeItem('savedSeats');
+                localStorage.removeItem('selectedSeats');
+                selectedSeats = [];
+                seatCounter = 0;
+                window.location.reload();
+            }
+        }
+
+        function compareSeats(seat1, seat2) {
+            const row1 = parseInt(seat1.match(/\d+/)[0]);
+            const row2 = parseInt(seat2.match(/\d+/)[0]);
+            const letter1 = seat1.match(/[A-Za-z]/) ? seat1.match(/[A-Za-z]/)[0] : '';
+            const letter2 = seat2.match(/[A-Za-z]/) ? seat2.match(/[A-Za-z]/)[0] : '';
+
+            if (row1 !== row2) return row1 - row2;
+            return seatLetters.indexOf(letter1) - seatLetters.indexOf(letter2);
+        }
+
+        function addSeat() {
+            const savedSeats = JSON.parse(localStorage.getItem('savedSeats')) || [];
+            let seatNumber;
+
+            do {
+                const row = startRow + Math.floor(seatCounter / (useLetters ? seatLetters.length : 1));
+                const letter = useLetters ? seatLetters[seatCounter % seatLetters.length] : '';
+                seatNumber = useLetters ? `${row}${letter}` : `${row}`;
+                seatCounter++;
+            } while (savedSeats.includes(seatNumber));
+
+            if (useLetters && compareSeats(seatNumber, endSeat) > 0) {
+                alert(`Достигнуто конечное место (${endSeat}). Добавление больше невозможно!`);
+                return;
+            } else if (!useLetters && parseInt(seatNumber) > parseInt(endSeat)) {
+                alert(`Достигнуто конечное место (${endSeat}). Добавление больше невозможно!`);
+                return;
+            }
+
+            const seatElement = document.createElement('div');
+            seatElement.className = 'seat';
+            seatElement.setAttribute('data-seat', seatNumber);
+            seatElement.textContent = seatNumber;
+            leftColumn.appendChild(seatElement);
+
+            savedSeats.push(seatNumber);
+            localStorage.setItem('savedSeats', JSON.stringify(savedSeats));
+        }
+
+        function openSettingsModal() {
+            seatLettersInput.value = seatLetters.join(',');
+            startRowInput.value = startRow;
+            endSeatInput.value = endSeat;
+            useLettersCheckbox.checked = useLetters;
+            seatLettersInput.disabled = !useLetters;
+            settingsModal.style.display = 'block';
+        }
+
+        function closeSettingsModal() {
+            settingsModal.style.display = 'none';
+        }
+
+        function applySettings() {
+            const letters = seatLettersInput.value.split(',').map(l => l.trim());
+            const row = parseInt(startRowInput.value);
+            const end = endSeatInput.value.trim();
+            const newUseLetters = useLettersCheckbox.checked;
+
+            if ((newUseLetters && letters.length > 0 && !isNaN(row) && end) || (!newUseLetters && !isNaN(row) && end)) {
+                const settingsChanged = 
+                    JSON.stringify(letters) !== JSON.stringify(seatLetters) ||
+                    row !== startRow ||
+                    end !== endSeat ||
+                    newUseLetters !== useLetters;
+
+                if (settingsChanged) {
+                    if (confirm('Изменение настроек приведет к сбросу всех добавленных мест. Продолжить?')) {
+                        const savedSeats = JSON.parse(localStorage.getItem('savedSeats')) || [];
+                        savedSeats.forEach(seat => {
+                            localStorage.removeItem(`menu_${seat}`);
+                        });
+                        localStorage.removeItem('savedSeats');
+                        localStorage.removeItem('selectedSeats');
+
+                        seatLetters = newUseLetters ? letters : [];
+                        startRow = row;
+                        endSeat = end;
+                        useLetters = newUseLetters;
+                        seatCounter = 0;
+                        selectedSeats = [];
+
+                        leftColumn.innerHTML = '';
+                        rightColumn.innerHTML = '';
+                    }
+                } else {
+                    closeSettingsModal();
+                    return;
+                }
+
+                closeSettingsModal();
+            } else {
+                alert('Пожалуйста, заполните все поля корректно!');
+            }
+        }
+
+        async function openFlightModal() {
+            flightModal.style.display = 'block';
+            flightDirectionSelect.innerHTML = '<option value="">Выберите направление</option>';
+
+            const url = 'https://raw.githubusercontent.com/saySPB/myFlightmenu/main/Лист%20Microsoft%20Excel.xlsx';
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`Ошибка HTTP: ${response.status}`);
+                const arrayBuffer = await response.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+                const directions = [...new Set(jsonData.map(row => row['Flight Direction']))];
+                directions.forEach(direction => {
+                    flightDirectionSelect.innerHTML += `<option value="${direction}">${direction}</option>`;
+                });
+            } catch (error) {
+                console.error('Ошибка загрузки списка рейсов:', error);
+                alert('Не удалось загрузить список рейсов с GitHub. Проверьте консоль для деталей.');
+            }
+        }
+
+        function closeFlightModal() {
+            flightModal.style.display = 'none';
+        }
+
+        async function loadMenuFromGitHub() {
+            const direction = flightDirectionSelect.value;
+            if (!direction) {
+                alert('Пожалуйста, выберите направление!');
+                return;
+            }
+
+            const url = 'https://raw.githubusercontent.com/saySPB/myFlightmenu/main/Лист%20Microsoft%20Excel.xlsx';
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`Ошибка HTTP: ${response.status}`);
+                const arrayBuffer = await response.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+                const filteredData = jsonData.filter(row => row['Flight Direction'] === direction);
+                const menuData = {};
+                const cycles = [...new Set(filteredData.map(row => row['Cycle']))];
+
+                cycles.forEach(cycle => {
+                    menuData[cycle] = { sections: {}, subitems: {} };
+                    const cycleData = filteredData.filter(row => row['Cycle'] === cycle);
+                    cycleData.forEach(row => {
+                        const section = row['Section'];
+                        const item = row['Item'];
+                        let subitems = [];
+                        if (row['Subitem']) subitems.push(row['Subitem']);
+                        if (row['Subitem.1']) subitems.push(row['Subitem.1']);
+
+                        if (!menuData[cycle].sections[section]) {
+                            menuData[cycle].sections[section] = [];
+                        }
+                        if (!menuData[cycle].sections[section].includes(item)) {
+                            menuData[cycle].sections[section].push(item);
+                        }
+                        if (subitems.length > 0) {
+                            menuData[cycle].subitems[item] = subitems;
+                        }
+                    });
+                });
+
+                localStorage.setItem('menuData', JSON.stringify(menuData));
+                localStorage.setItem('flightDirection', direction);
+                localStorage.setItem('cycles', JSON.stringify(cycles));
+                alert('Меню успешно подгружено!');
+                closeFlightModal();
+            } catch (error) {
+                console.error('Ошибка загрузки меню:', error);
+                alert('Не удалось подгрузить меню с GitHub. Проверьте консоль для деталей.');
+            }
+        }
+
+        leftColumn.addEventListener('click', handleSeatClick);
+        rightColumn.addEventListener('click', handleSeatClick);
+        useLettersCheckbox.addEventListener('change', () => {
+            seatLettersInput.disabled = !useLettersCheckbox.checked;
+        });
+
+        loadSeats();
+    </script>
+</body>
+</html>
