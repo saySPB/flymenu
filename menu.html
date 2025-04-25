@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Меню — Бизнес-класс</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        /* Updated menu.css */
+        :root {
+            --bg-color: #1a2a44;
+            --text-color: #ffffff;
+            --card-bg: #2c3e50;
+            --item-bg: #34495e;
+            --accent-color: #d4af37;
+            --btn-primary: #1e88e5;
+            --btn-primary-hover: #1565c0;
+            --btn-danger: #d32f2f;
+            --btn-danger-hover: #b71c1c;
+            --border-color: #455a64;
+        }
+
+        body.light-theme {
+            --bg-color: #f5f5f5;
+            --text-color: #333333;
+            --card-bg: #ffffff;
+            --item-bg: #e0e0e0;
+            --accent-color: #d4af37;
+            --btn-primary: #1e88e5;
+            --btn-primary-hover: #1565c0;
+            --btn-danger: #d32f2f;
+            --btn-danger-hover: #b71c1c;
+            --border-color: #bdbdbd;
+        }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            max-width: 1200px;
+            padding: 20px;
+            position: relative;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            text-align: center;
+            color: var(--accent-color);
+            margin: 0 10px;
+            font-size: 2.2em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            flex-grow: 1;
+        }
+
+        .item-text {
+            display: inline-block;
+            margin-left: 10px;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: var(--item-bg);
+            border-radius: 6px;
+            margin: 0 5px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .tab.active {
+            background: var(--accent-color);
+            color: var(--bg-color);
+        }
+
+        .tab:hover {
+            background: #3e5a74;
+        }
+
+        .menu-container {
+            display: flex;
+            width: 100%;
+            max-width: 1200px;
+            margin: 20px;
+            justify-content: space-between;
+        }
+
+        .menu-seat {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            width: 48%;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .menu-seat:hover {
+            transform: translateY(-5px);
+        }
+
+        .menu-seat h3 {
+            color: var(--accent-color);
+            font-size: 1.8em;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .menu-seat h4 {
+            color: var(--text-color);
+            font-size: 1.4em;
+            margin: 20px 0 10px;
+            padding: 0;
+        }
+
+        .menu-item-container {
+            position: relative;
+        }
+
+        .menu-item-container label {
+            display: block;
+            margin: 10px 0;
+            padding: 10px;
+            background: var(--item-bg);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.2s ease;
+        }
+
+        .menu-item-container label:hover {
+            background: #3e5a74;
+            transform: translateX(5px);
+        }
+
+        .info-icon {
+            display: inline-block;
+            margin-left: 5px;
+            font-size: 14px;
+            color: var(--accent-color);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .tooltip {
+            display: none;
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 1000;
+            max-width: 200px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }
+
+        .subitems {
+            margin-left: 20px;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .menu-item-container.active .subitems {
+            display: block;
+            opacity: 1;
+        }
+
+        .selected-subitems {
+            margin-left: 20px;
+            color: var(--accent-color);
+            font-style: italic;
+        }
+
+        .buttons {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: var(--btn-primary);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin: 5px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:hover {
+            background: var(--btn-primary-hover);
+            transform: translateY(-2px);
+        }
+
+        .save-button {
+            padding: 12px 30px;
+        }
+
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            max-width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            color: var(--text-color);
+        }
+
+        .modal h3 {
+            color: var(--accent-color);
+            margin-top: 0;
+            font-size: 1.8em;
+        }
+
+        .editor-section {
+            margin-bottom: 20px;
+        }
+
+        .editor-section h4 {
+            color: var(--text-color);
+            margin: 10px 0;
+        }
+
+        .editor-section input {
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--item-bg);
+            color: var(--text-color);
+            width: 100%;
+        }
+
+        .editor-section .btn {
+            padding: 5px 10px;
+        }
+
+        .modal-button.close-button {
+            background: var(--btn-danger);
+        }
+
+        .modal-button.close-button:hover {
+            background: var(--btn-danger-hover);
+        }
+
+        .back-button {
+            background: var(--btn-primary);
+            font-size: 1.5em;
+            padding: 5px 10px;
+            border-radius: 6px;
+            width: auto;
+            height: auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+        }
+
+        .back-button:hover {
+            background: var(--btn-primary-hover);
+            transform: scale(1.1);
+        }
+
+        .settings-button {
+            background: #455a64;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 1.2em;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 10px;
+        }
+
+        .settings-button:hover {
+            background: #37474f;
+            transform: scale(1.1);
+        }
+
+        .passenger-name-container {
+            margin: 10px 0;
+            padding: 10px;
+            background: var(--card-bg);
+            border-radius: 6px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            transition: transform 0.3s ease, background 0.3s ease;
+        }
+
+        .passenger-name-container:hover {
+            transform: translateY(-2px);
+            background: var(--item-bg);
+        }
+
+        .passenger-name-container label {
+            margin-right: 10px;
+            font-weight: 600;
+            color: var(--text-color);
+            font-family: 'Open Sans', sans-serif;
+            white-space: nowrap;
+        }
+
+        .passenger-name {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--item-bg);
+            color: var(--text-color);
+            width: 200px;
+            font-family: 'Open Sans', sans-serif;
+            transition: all 0.3s ease;
+            font-size: 1em;
+        }
+
+        .passenger-name:focus {
+            border-color: var(--accent-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.3);
+        }
+
+        /* Updated mobile styles to match the image layout */
+        @media (max-width: 768px) {
+            .menu-container {
+                flex-direction: row; /* Keep it as row to match the side-by-side layout */
+                justify-content: space-between;
+                margin: 10px; /* Reduce margin for smaller screens */
+            }
+            
+            .menu-seat {
+                width: 48%; /* Adjust width to fit side by side */
+                padding: 15px; /* Slightly reduce padding */
+                margin-bottom: 0; /* Remove bottom margin since they are side by side */
+            }
+            
+            .menu-seat h3 {
+                font-size: 1.5em; /* Slightly smaller heading for mobile */
+            }
+            
+            .menu-seat h4 {
+                font-size: 1.2em; /* Adjust section heading size */
+            }
+            
+            .passenger-name-container {
+                flex-direction: row; /* Keep passenger name container as row */
+                align-items: center;
+            }
+            
+            .passenger-name {
+                width: 150px; /* Reduce width to fit better on smaller screens */
+                font-size: 0.9em; /* Slightly smaller font */
+            }
+            
+            .menu-item-container label {
+                padding: 8px; /* Reduce padding for menu items */
+                font-size: 0.9em; /* Slightly smaller font */
+            }
+            
+            input[type="checkbox"] {
+                width: 18px; /* Slightly smaller checkbox */
+                height: 18px;
+            }
+            
+            .subitems {
+                margin-left: 15px; /* Reduce indentation */
+            }
+            
+            .selected-subitems {
+                margin-left: 15px; /* Reduce indentation */
+                font-size: 0.85em; /* Slightly smaller font */
+            }
+            
+            .btn {
+                padding: 8px 15px; /* Adjust button padding */
+                font-size: 0.9em; /* Slightly smaller font */
+            }
+            
+            .save-button {
+                padding: 10px 25px; /* Adjust save button padding */
+            }
+        }
+
+        @media (max-width: 480px) {
+            .menu-seat {
+                width: 48%; /* Maintain side-by-side layout */
+                padding: 10px; /* Further reduce padding */
+            }
+            
+            .menu-seat h3 {
+                font-size: 1.3em; /* Further reduce heading size */
+            }
+            
+            .passenger-name {
+                width: 120px; /* Further reduce input width */
+                font-size: 0.85em; /* Further reduce font size */
+            }
+            
+            .menu-item-container label {
+                padding: 6px; /* Further reduce padding */
+                font-size: 0.85em; /* Further reduce font size */
+            }
+            
+            .btn {
+                padding: 6px 12px; /* Further adjust button padding */
+                font-size: 0.85em; /* Further reduce font size */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <button class="back-button btn" onclick="goBackToIndex()">🡨</button>
+        <h1>Меню — Бизнес-класс</h1>
+        <button class="settings-button btn" onclick="openSettingsModal()">⚙️</button>
+    </div>
+    <div class="tabs" id="cycle-tabs"></div>
+    <div class="menu-container" id="menu-container">
+        <div class="menu-seat" id="menu-seat-1"></div>
+        <div class="menu-seat" id="menu-seat-2" style="display: none;"></div>
+    </div>
+    <div class="buttons">
+        <button class="save-button btn" id="save-button" onclick="saveChanges()">Сохранить</button>
+    </div>
+
+    <div class="modal" id="settings-modal" style="display: none;">
+        <h3>Редактор меню</h3>
+        <div id="editor-sections"></div>
+        <h4>Общие подпункты</h4>
+        <div id="global-subitems"></div>
+        <button class="btn" onclick="addSection()">Добавить раздел</button>
+        <button class="btn" onclick="addGlobalSubItem()">+ Добавить подпункт</button>
+        <button class="btn" onclick="saveMenuSettings()">Сохранить настройки</button>
+        <button class="btn modal-button close-button" onclick="closeSettingsModal()">Закрыть</button>
+    </div>
+
+    <script>
+        const menuContainer = document.getElementById('menu-container');
+        const menuSeat1 = document.getElementById('menu-seat-1');
+        const menuSeat2 = document.getElementById('menu-seat-2');
+        const cycleTabs = document.getElementById('cycle-tabs');
+        const editorSections = document.getElementById('editor-sections');
+        const globalSubItemsContainer = document.getElementById('global-subitems');
+        const currentSeats = JSON.parse(localStorage.getItem('currentSeats')) || [];
+        const menuData = JSON.parse(localStorage.getItem('menuData')) || {};
+        const cycles = JSON.parse(localStorage.getItem('cycles')) || [];
+        let selectedCycle = cycles[0] || '';
+        let savedMenus = currentSeats.map(seat => ({
+            seat,
+            data: JSON.parse(localStorage.getItem(`menu_${seat}`)) || {}
+        }));
+
+        if (localStorage.getItem('theme') === 'light') {
+            document.body.classList.add('light-theme');
+        }
+
+        function getPassengerName(seat) {
+            const savedMenu = JSON.parse(localStorage.getItem(`menu_${seat}`)) || {};
+            return savedMenu.passengerName || '';
+        }
+
+        function savePassengerName(input, seat) {
+            const name = input.value.trim();
+            const savedMenu = JSON.parse(localStorage.getItem(`menu_${seat}`)) || {};
+            savedMenu.passengerName = name;
+            localStorage.setItem(`menu_${seat}`, JSON.stringify(savedMenu));
+            
+            // Visual feedback
+            input.style.borderColor = 'var(--accent-color)';
+            setTimeout(() => {
+                input.style.borderColor = 'var(--border-color)';
+            }, 1000);
+        }
+
+        function goBackToIndex() {
+            window.location.href = 'index.html';
+        }
+
+        function renderTabs() {
+            cycleTabs.innerHTML = '';
+            if (cycles.length === 0) {
+                cycleTabs.innerHTML = '<p>Нет доступных циклов. Подгрузите меню в настройках.</p>';
+                return;
+            }
+            cycles.forEach(cycle => {
+                const tab = document.createElement('div');
+                tab.className = `tab ${cycle === selectedCycle ? 'active' : ''}`;
+                tab.textContent = cycle;
+                tab.onclick = () => {
+                    selectedCycle = cycle;
+                    updateTabs();
+                    updateMenu();
+                };
+                cycleTabs.appendChild(tab);
+            });
+        }
+
+        function updateTabs() {
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.classList.toggle('active', tab.textContent === selectedCycle);
+            });
+        }
+
+        function updateMenu() {
+            const cycleData = menuData[selectedCycle] || { sections: {}, subitems: {} };
+
+            currentSeats.forEach((seat, index) => {
+                const targetContainer = index === 0 ? menuSeat1 : menuSeat2;
+                if (index === 1) menuSeat2.style.display = 'block';
+                targetContainer.innerHTML = `
+                    <h3>Место: <span contenteditable="true" data-seat="${seat}">${seat}</span></h3>
+                    <div class="passenger-name-container">
+                        <label for="passenger-name-${seat}">Имя пассажира:</label>
+                        <input type="text" class="passenger-name" id="passenger-name-${seat}" 
+                               placeholder="Введите имя пассажира" 
+                               value="${getPassengerName(seat)}"
+                               onchange="savePassengerName(this, '${seat}')"
+                               aria-label="Имя пассажира для места ${seat}">
+                    </div>
+                `;
+
+                if (Object.keys(cycleData.sections).length === 0) {
+                    targetContainer.innerHTML += '<p>Меню пустое. Настройте его через редактор.</p>';
+                    return;
+                }
+
+                Object.keys(cycleData.sections).forEach(sectionName => {
+                    targetContainer.innerHTML += `<h4>${sectionName}</h4>`;
+                    cycleData.sections[sectionName].forEach(item => {
+                        const isChecked = savedMenus[index].data[item]?.checked ? 'checked' : '';
+                        const selectedSubitems = savedMenus[index].data[item]?.subitems || [];
+                        const itemSubitems = cycleData.subitems[item] || [];
+                        targetContainer.innerHTML += `
+                            <div class="menu-item-container" data-item="${item}" data-seat="${seat}" data-section="${sectionName}">
+                                <label class="main-label">
+                                    <input type="checkbox" ${isChecked} onchange="updateCheckbox(this, '${item}', '${seat}', '${sectionName}')">
+                                    <span class="item-text">${item}</span>
+                                </label>
+                                <div class="subitems">
+                                    ${itemSubitems.map(sub => `
+                                        <label class="subitem-label">
+                                            <input type="checkbox" ${selectedSubitems.includes(sub) ? 'checked' : ''} onchange="toggleSubitem(this, '${item}', '${sub}', '${seat}', '${sectionName}')">
+                                            ${sub}
+                                        </label>
+                                    `).join('')}
+                                    <input type="text" placeholder="Добавить свой вариант" onkeypress="if(event.key === 'Enter') addCustomSubitem(this, '${item}', '${seat}', '${sectionName}')">
+                                </div>
+                                <div class="selected-subitems">${selectedSubitems.map(sub => `<div>${sub}</div>`).join('')}</div>
+                            </div>
+                        `;
+                    });
+                });
+            });
+
+            attachEventListeners();
+        }
+
+        function attachEventListeners() {
+            const items = document.querySelectorAll('.menu-item-container');
+            let holdTimer;
+
+            items.forEach(item => {
+                const mainLabel = item.querySelector('.main-label');
+                const mainCheckbox = mainLabel.querySelector('input[type="checkbox"]');
+                const itemName = item.getAttribute('data-item');
+                const seat = item.getAttribute('data-seat');
+                const sectionName = item.getAttribute('data-section');
+                const subitemLabels = item.querySelectorAll('.subitem-label');
+
+                mainLabel.addEventListener('click', (e) => {
+                    if (e.target.tagName !== 'INPUT') {
+                        e.preventDefault();
+                        mainCheckbox.checked = !mainCheckbox.checked;
+                        updateCheckbox(mainCheckbox, itemName, seat, sectionName);
+                    }
+                });
+
+                subitemLabels.forEach(label => {
+                    const subCheckbox = label.querySelector('input[type="checkbox"]');
+                    const subitemText = label.textContent.trim();
+                    label.addEventListener('click', (e) => {
+                        if (e.target.tagName !== 'INPUT') {
+                            e.preventDefault();
+                            subCheckbox.checked = !subCheckbox.checked;
+                            toggleSubitem(subCheckbox, itemName, subitemText, seat, sectionName);
+                        }
+                    });
+                });
+
+                mainLabel.addEventListener('touchstart', (e) => {
+                    holdTimer = setTimeout(() => {
+                        item.classList.toggle('active');
+                    }, 500);
+                });
+
+                mainLabel.addEventListener('touchend', () => {
+                    clearTimeout(holdTimer);
+                });
+
+                mainLabel.addEventListener('touchcancel', () => {
+                    clearTimeout(holdTimer);
+                });
+
+                mainLabel.addEventListener('mousedown', (e) => {
+                    holdTimer = setTimeout(() => {
+                        item.classList.toggle('active');
+                    }, 500);
+                });
+
+                mainLabel.addEventListener('mouseup', () => {
+                    clearTimeout(holdTimer);
+                });
+
+                mainLabel.addEventListener('mouseleave', () => {
+                    clearTimeout(holdTimer);
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!item.contains(e.target) && item.classList.contains('active')) {
+                        item.classList.remove('active');
+                    }
+                });
+            });
+        }
+
+        function updateCheckbox(checkbox, itemName, currentSeat, sectionName) {
+            const menuData = savedMenus.find(menu => menu.seat === currentSeat).data;
+            menuData[itemName] = menuData[itemName] || { subitems: [], section: sectionName };
+            menuData[itemName].checked = checkbox.checked;
+            if (!checkbox.checked) {
+                menuData[itemName].subitems = [];
+                const container = checkbox.closest('.menu-item-container');
+                container.querySelector('.selected-subitems').innerHTML = '';
+            }
+        }
+
+        function toggleSubitem(checkbox, itemName, subitemText, currentSeat, sectionName) {
+            const container = checkbox.closest('.menu-item-container');
+            const selectedSubitemsDiv = container.querySelector('.selected-subitems');
+            const menuData = savedMenus.find(menu => menu.seat === currentSeat).data;
+            menuData[itemName] = menuData[itemName] || { subitems: [], section: sectionName };
+
+            if (checkbox.checked) {
+                if (!menuData[itemName].subitems.includes(subitemText)) {
+                    menuData[itemName].subitems.push(subitemText);
+                }
+            } else {
+                menuData[itemName].subitems = menuData[itemName].subitems.filter(sub => sub !== subitemText);
+            }
+            selectedSubitemsDiv.innerHTML = menuData[itemName].subitems.map(sub => `<div>${sub}</div>`).join('');
+        }
+
+        function addCustomSubitem(input, itemName, currentSeat, sectionName) {
+            const subitemText = input.value.trim();
+            if (subitemText) {
+                const container = input.closest('.menu-item-container');
+                const selectedSubitemsDiv = container.querySelector('.selected-subitems');
+                const menuData = savedMenus.find(menu => menu.seat === currentSeat).data;
+                menuData[itemName] = menuData[itemName] || { subitems: [], section: sectionName };
+
+                if (!menuData[itemName].subitems.includes(subitemText)) {
+                    menuData[itemName].subitems.push(subitemText);
+                    selectedSubitemsDiv.innerHTML = menuData[itemName].subitems.map(sub => `<div>${sub}</div>`).join('');
+
+                    const cycleData = menuData[selectedCycle] || { sections: {}, subitems: {} };
+                    if (!cycleData.subitems[itemName]) cycleData.subitems[itemName] = [];
+                    if (!cycleData.subitems[itemName].includes(subitemText)) {
+                        cycleData.subitems[itemName].push(subitemText);
+                        menuData[selectedCycle] = cycleData;
+                        localStorage.setItem('menuData', JSON.stringify(menuData));
+                    }
+                }
+                input.value = '';
+            }
+        }
+
+        function saveChanges() {
+            currentSeats.forEach((seat, index) => {
+                const menuData = {};
+                const passengerName = document.getElementById(`passenger-name-${seat}`)?.value || '';
+
+                document.querySelectorAll(`.menu-item-container[data-seat="${seat}"]`).forEach(container => {
+                    const itemName = container.getAttribute('data-item');
+                    const sectionName = container.getAttribute('data-section');
+                    const checkbox = container.querySelector('.main-label input');
+                    const selectedSubitems = Array.from(container.querySelectorAll('.selected-subitems div')).map(div => div.textContent);
+                    if (checkbox.checked || selectedSubitems.length > 0) {
+                        menuData[itemName] = {
+                            checked: checkbox.checked,
+                            subitems: selectedSubitems,
+                            section: sectionName,
+                            cycle: selectedCycle
+                        };
+                    }
+                });
+
+                if (passengerName) {
+                    menuData.passengerName = passengerName;
+                }
+
+                localStorage.setItem(`menu_${seat}`, JSON.stringify(menuData));
+
+                let savedSeats = JSON.parse(localStorage.getItem('savedSeats')) || [];
+                if (!savedSeats.includes(seat)) {
+                    savedSeats.push(seat);
+                    localStorage.setItem('savedSeats', JSON.stringify(savedSeats));
+                }
+
+                let selectedSeats = JSON.parse(localStorage.getItem('selectedSeats')) || [];
+                selectedSeats = selectedSeats.filter(s => s !== seat);
+                localStorage.setItem('selectedSeats', JSON.stringify(selectedSeats));
+            });
+
+            alert('Изменения сохранены для всех выбранных мест!');
+            window.location.href = 'index.html';
+        }
+
+        function openSettingsModal() {
+            document.getElementById('settings-modal').style.display = 'block';
+            loadEditorSections();
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+
+        function addSection() {
+            const sectionId = `section-${Date.now()}`;
+            editorSections.insertAdjacentHTML('beforeend', `
+                <div class="editor-section" id="${sectionId}">
+                    <input type="text" placeholder="Название раздела" id="${sectionId}-name">
+                    <div id="${sectionId}-items"></div>
+                    <button class="btn" onclick="addItem('${sectionId}')">+ Добавить пункт</button>
+                    <button class="btn" onclick="document.getElementById('${sectionId}').remove()">- Удалить раздел</button>
+                </div>
+            `);
+        }
+
+        function addItem(sectionId) {
+            const itemId = `item-${Date.now()}`;
+            document.getElementById(`${sectionId}-items`).insertAdjacentHTML('beforeend', `
+                <div class="menu-item" id="${itemId}">
+                    <input type="text" placeholder="Название пункта" id="${itemId}-name">
+                    <button class="btn" onclick="document.getElementById('${itemId}').remove()">- Удалить</button>
+                </div>
+            `);
+        }
+
+        function addGlobalSubItem() {
+            const subItemId = `subitem-${Date.now()}`;
+            globalSubItemsContainer.insertAdjacentHTML('beforeend', `
+                <div class="global-subitem" id="${subItemId}">
+                    <input type="text" placeholder="Название подпункта" id="${subItemId}-name">
+                    <button class="btn" onclick="document.getElementById('${subItemId}').remove()">- Удалить</button>
+                </div>
+            `);
+        }
+
+        function loadEditorSections() {
+            const cycleData = menuData[selectedCycle] || { sections: {}, subitems: {} };
+            editorSections.innerHTML = '';
+            globalSubItemsContainer.innerHTML = '';
+
+            Object.keys(cycleData.sections).forEach((sectionName, index) => {
+                const sectionId = `section-${Date.now()}-${index}`;
+                editorSections.insertAdjacentHTML('beforeend', `
+                    <div class="editor-section" id="${sectionId}">
+                        <input type="text" value="${sectionName}" id="${sectionId}-name">
+                        <div id="${sectionId}-items"></div>
+                        <button class="btn" onclick="addItem('${sectionId}')">+ Добавить пункт</button>
+                        <button class="btn" onclick="document.getElementById('${sectionId}').remove()">- Удалить раздел</button>
+                    </div>
+                `);
+                cycleData.sections[sectionName].forEach(item => {
+                    const itemId = `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                    document.getElementById(`${sectionId}-items`).insertAdjacentHTML('beforeend', `
+                        <div class="menu-item" id="${itemId}">
+                            <input type="text" value="${item}" id="${itemId}-name">
+                            <button class="btn" onclick="document.getElementById('${itemId}').remove()">- Удалить</button>
+                        </div>
+                    `);
+                });
+            });
+
+            Object.values(cycleData.subitems).flat().forEach((subitem, index) => {
+                const subItemId = `subitem-${Date.now()}-${index}`;
+                globalSubItemsContainer.insertAdjacentHTML('beforeend', `
+                    <div class="global-subitem" id="${subItemId}">
+                        <input type="text" value="${subitem}" id="${subItemId}-name">
+                        <button class="btn" onclick="document.getElementById('${subItemId}').remove()">- Удалить</button>
+                    </div>
+                `);
+            });
+        }
+
+        function saveMenuSettings() {
+            const cycleData = menuData[selectedCycle] || { sections: {}, subitems: {} };
+            cycleData.sections = {};
+            document.querySelectorAll('.editor-section').forEach(section => {
+                const sectionName = section.querySelector('input').value;
+                const items = Array.from(section.querySelectorAll('.menu-item input')).map(input => input.value);
+                if (sectionName && items.length) cycleData.sections[sectionName] = items;
+            });
+            menuData[selectedCycle] = cycleData;
+            localStorage.setItem('menuData', JSON.stringify(menuData));
+            closeSettingsModal();
+            updateMenu();
+        }
+
+        renderTabs();
+        updateMenu();
+    </script>
+</body>
+</html>
