@@ -637,6 +637,45 @@
             document.body.classList.add('light-theme');
         }
 
+        // Debounce function to limit resize event frequency
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Save and restore focus during navigation updates
+        let focusedElementId = null;
+
+        function saveFocus() {
+            const activeElement = document.activeElement;
+            if (activeElement && activeElement.classList.contains('passenger-name')) {
+                focusedElementId = activeElement.id;
+            } else {
+                focusedElementId = null;
+            }
+        }
+
+        function restoreFocus() {
+            if (focusedElementId) {
+                const element = document.getElementById(focusedElementId);
+                if (element) {
+                    element.focus();
+                    // Move cursor to the end of the input
+                    const value = element.value;
+                    element.value = '';
+                    element.value = value;
+                }
+                focusedElementId = null;
+            }
+        }
+
         function getPassengerName(seat) {
             const savedMenu = JSON.parse(localStorage.getItem(`menu_${seat}`)) || {};
             return savedMenu.passengerName || '';
@@ -655,6 +694,8 @@
         }
 
         function updateNavigation() {
+            saveFocus();
+            
             const totalPairs = Math.max(1, currentSeats.length - 1);
             const currentPair = Math.min(currentSeatIndex, totalPairs - 1);
             
@@ -673,6 +714,8 @@
             nextSeatBtn.disabled = currentSeatIndex >= currentSeats.length - 2;
             
             updateHotFoodCounter();
+            
+            restoreFocus();
         }
 
         function nextSeat() {
@@ -1118,7 +1161,10 @@
             updateNavigation();
         }
 
-        window.addEventListener('resize', updateNavigation);
+        // Debounced resize handler
+        const debouncedUpdateNavigation = debounce(updateNavigation, 250);
+
+        window.addEventListener('resize', debouncedUpdateNavigation);
 
         window.onload = function() {
             renderTabs();
@@ -1137,5 +1183,6 @@
             };
         };
     </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93b8d35409886a7b',t:'MTc0NjUzODE1Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
 </body>
 </html>
